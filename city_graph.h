@@ -4,12 +4,16 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
+#include "enums.h"
 
 struct Road {
     std::string to_node;
     double distance;
     double speed;
     std::string road_type;
+    double base_travel_time;
+    RoadState state;
+    double get_travel_time() const;
 };
 
 struct Node {
@@ -27,5 +31,7 @@ struct CityGraph {
 };
 
 CityGraph load_city_graph(const std::string& filepath);
+
+std::vector<Node> A_star(const CityGraph& graph, const std::string& start_node_id, const std::string& goal_node_id);
 
 #endif // CITY_GRAPH_H
