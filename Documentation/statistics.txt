@@ -1,0 +1,3 @@
+--- Simulation Statistics ---
+Status: Completed
+Total Dispatches: 1

@@ -46,7 +46,7 @@ std::vector<Incident> load_incidents(const std::string& filepath) {
 
             if (std::getline(ss, inc.required_capability, ',') &&
                 std::getline(ss, segment, ',')) {
-                inc.timestamp = std::stod(segment);
+                inc.timestamp = std::stoi(segment);
 
                 if (std::getline(ss, segment, ',')) {
                     inc.time_required = std::stod(segment);

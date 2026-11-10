@@ -54,6 +54,13 @@ CityGraph load_city_graph(const std::string& filepath) {
 
 double Road::get_travel_time() const {
     double travel_time = base_travel_time;
+    if (traffic_volume == "high") {
+        travel_time *= 1.5;
+    } else if (traffic_volume == "medium") {
+        travel_time *= 1.2;
+    }
+    
+
     if (state == RoadState::CONGESTED) {
         travel_time *= 1.5;
     } else if (state == RoadState::BLOCKED) {
@@ -74,6 +81,7 @@ std::vector<Node> A_star(const CityGraph& graph, const std::string& start_node_i
         return {};
     }
 
+    // maximum speed for admissible heuristic
     double max_speed = 1.0;
     for (const auto& [from_id, roads] : graph.adj_list) {
         for (const auto& road : roads) {

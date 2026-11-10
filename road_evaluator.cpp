@@ -6,7 +6,7 @@
 #include <algorithm>
 #include <iostream>
 
-void RoadEvaluator::load_configurations(const std::string& road_prob_json_path, const std::string& traffic_prob_json_path) {
+void RoadEvaluator::load_configurations(const std::string& road_prob_json_path, const std::string& traffic_prob_json_path, const std::string& traffic_csv, const std::string& reports_csv) {
     std::ifstream f1(road_prob_json_path);
     if (!f1.is_open()) throw std::runtime_error("Failed to open " + road_prob_json_path);
     f1 >> road_prob_config_;
@@ -14,6 +14,9 @@ void RoadEvaluator::load_configurations(const std::string& road_prob_json_path, 
     std::ifstream f2(traffic_prob_json_path);
     if (!f2.is_open()) throw std::runtime_error("Failed to open " + traffic_prob_json_path);
     f2 >> traffic_prob_config_;
+
+    all_observations = load_traffic_observations(traffic_csv);
+    reports = load_road_reports(reports_csv);
 }
 
 WeatherCondition RoadEvaluator::parse_weather(const std::string& str) {
@@ -201,8 +204,7 @@ std::string RoadEvaluator::evaluate_hmm_traffic(const std::vector<std::string>& 
     return best_state;
 }
 
-void RoadEvaluator::update_city_road_states(CityGraph& graph, const std::string& reports_csv) {
-    auto reports = load_road_reports(reports_csv);
+void RoadEvaluator::update_city_road_states(CityGraph& graph) {
     
     std::unordered_map<std::string, std::vector<std::pair<RoadStateSources, RoadState>>> road_reports_map;
     std::unordered_map<std::string, WeatherCondition> road_weather_map;
@@ -226,9 +228,8 @@ void RoadEvaluator::update_city_road_states(CityGraph& graph, const std::string&
     }
 }
 
-void RoadEvaluator::update_city_traffic_states(CityGraph& graph, const std::string& traffic_csv, int current_time) {
+void RoadEvaluator::update_city_traffic_states(CityGraph& graph, int current_time) {
     // 1. Load all observed traffic records from the CSV
-    auto all_observations = load_traffic_observations(traffic_csv);
 
     // 2. Group observations by road segment (from_node -> to_node)
     std::unordered_map<std::string, std::vector<TrafficObservation>> road_obs_map;

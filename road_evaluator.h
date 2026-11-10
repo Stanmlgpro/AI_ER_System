@@ -25,13 +25,13 @@ struct TrafficObservation {
 
 class RoadEvaluator {
 public:
-    void load_configurations(const std::string& road_prob_json_path, const std::string& traffic_prob_json_path);
+    void load_configurations(const std::string& road_prob_json_path, const std::string& traffic_prob_json_path, const std::string& traffic_csv, const std::string& reports_csv);
     std::vector<RoadReport> load_road_reports(const std::string& csv_path);
     std::vector<TrafficObservation> load_traffic_observations(const std::string& csv_path);
 
-    void update_city_road_states(CityGraph& graph, const std::string& reports_csv);
+    void update_city_road_states(CityGraph& graph);
 
-    void update_city_traffic_states(CityGraph& graph, const std::string& traffic_csv, int current_time);
+    void update_city_traffic_states(CityGraph& graph, int current_time);
 
     WeatherCondition parse_weather(const std::string& str);
     RoadStateSources parse_source(const std::string& str);
@@ -43,6 +43,8 @@ public:
 private:
     nlohmann::json road_prob_config_;
     nlohmann::json traffic_prob_config_;
+    std::vector<TrafficObservation> all_observations;
+    std::vector<RoadReport> reports;
 
     RoadState evaluate_bayesian_status(
         WeatherCondition weather, 

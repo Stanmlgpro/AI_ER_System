@@ -11,7 +11,7 @@ struct Incident {
     IncidentPriorityLevel priority; // Critical, High, Medium, Low[cite: 3]
     double deadline; // Absolute simulation time[cite: 3]
     std::string required_capability; //[cite: 3]
-    double timestamp; // When the incident becomes known[cite: 3]
+    int timestamp; // When the incident becomes known[cite: 3]
     double time_required; // Duration needed post-arrival[cite: 3]
 };
 
