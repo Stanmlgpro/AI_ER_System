@@ -33,16 +33,16 @@ public:
 
     void update_city_traffic_states(CityGraph& graph, const std::string& traffic_csv, int current_time);
 
-private:
-    nlohmann::json road_prob_config_;
-    nlohmann::json traffic_prob_config_;
-
     WeatherCondition parse_weather(const std::string& str);
     RoadStateSources parse_source(const std::string& str);
     RoadState parse_road_state(const std::string& str);
     std::string road_state_to_string(RoadState state);
     std::string weather_to_string(WeatherCondition weather);
     std::string source_to_string(RoadStateSources source);
+
+private:
+    nlohmann::json road_prob_config_;
+    nlohmann::json traffic_prob_config_;
 
     RoadState evaluate_bayesian_status(
         WeatherCondition weather, 
