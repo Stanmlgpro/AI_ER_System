@@ -29,7 +29,9 @@ public:
     std::vector<RoadReport> load_road_reports(const std::string& csv_path);
     std::vector<TrafficObservation> load_traffic_observations(const std::string& csv_path);
 
-    void update_city_road_states(CityGraph& graph, const std::string& reports_csv, const std::string& traffic_csv);
+    void update_city_road_states(CityGraph& graph, const std::string& reports_csv);
+
+    void update_city_traffic_states(CityGraph& graph, const std::string& traffic_csv, int current_time);
 
 private:
     nlohmann::json road_prob_config_;

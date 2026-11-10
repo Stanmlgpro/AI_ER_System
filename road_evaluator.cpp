@@ -178,10 +178,12 @@ std::string RoadEvaluator::evaluate_hmm_traffic(const std::vector<std::string>& 
 
         for (const auto& next_state : states) {
             double sum = 0.0;
+            // Prediction Step (Transition)
             for (const auto& prev_state : states) {
                 double trans_prob = traffic_prob_config_["transition"][prev_state][next_state].get<double>();
                 sum += beliefs[prev_state] * trans_prob;
             }
+            // Update Step (Emission / Sensor Noise Filtering)
             double emission_prob = traffic_prob_config_["emission"][next_state][obs].get<double>();
             next_beliefs[next_state] = sum * emission_prob;
         }
@@ -199,7 +201,7 @@ std::string RoadEvaluator::evaluate_hmm_traffic(const std::vector<std::string>& 
     return best_state;
 }
 
-void RoadEvaluator::update_city_road_states(CityGraph& graph, const std::string& reports_csv, const std::string& traffic_csv) {
+void RoadEvaluator::update_city_road_states(CityGraph& graph, const std::string& reports_csv) {
     auto reports = load_road_reports(reports_csv);
     
     std::unordered_map<std::string, std::vector<std::pair<RoadStateSources, RoadState>>> road_reports_map;
@@ -220,6 +222,46 @@ void RoadEvaluator::update_city_road_states(CityGraph& graph, const std::string&
             } else {
                 road.state = RoadState::OPEN; 
             }
+        }
+    }
+}
+
+void RoadEvaluator::update_city_traffic_states(CityGraph& graph, const std::string& traffic_csv, int current_time) {
+    // 1. Load all observed traffic records from the CSV
+    auto all_observations = load_traffic_observations(traffic_csv);
+
+    // 2. Group observations by road segment (from_node -> to_node)
+    std::unordered_map<std::string, std::vector<TrafficObservation>> road_obs_map;
+    for (const auto& obs : all_observations) {
+        if (obs.observation_nr <= current_time) { // Only consider data up to the current timestamp
+            std::string key = obs.from_node + "->" + obs.to_node;
+            road_obs_map[key].push_back(obs);
+        }
+    }
+
+    // 3. Iterate through every road in the CityGraph and evaluate its HMM traffic state
+    for (auto& [from_id, roads] : graph.adj_list) {
+        for (auto& road : roads) {
+            std::string key = from_id + "->" + road.to_node;
+            
+            std::vector<std::string> sequential_obs;
+            if (road_obs_map.find(key) != road_obs_map.end()) {
+                // Sort observations chronologically by observation_nr
+                auto& obs_list = road_obs_map[key];
+                std::sort(obs_list.begin(), obs_list.end(), [](const auto& a, const auto& b) {
+                    return a.observation_nr < b.observation_nr;
+                });
+
+                for (const auto& obs : obs_list) {
+                    sequential_obs.push_back(obs.observation);
+                }
+            }
+
+            // Run the HMM Forward Algorithm for this specific road up to current_time
+            std::string traffic_state = evaluate_hmm_traffic(sequential_obs);
+            
+            // Store or map the resulting traffic state to the road object
+            road.traffic_volume = traffic_state; // (Make sure to add std::string traffic_volume to your Road struct)
         }
     }
 }

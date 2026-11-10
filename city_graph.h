@@ -11,6 +11,7 @@ struct Road {
     double distance;
     double speed;
     std::string road_type;
+    std::string traffic_volume; // to store traffic volume (Low, Medium, High)
     double base_travel_time;
     RoadState state;
     double get_travel_time() const;
