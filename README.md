@@ -31,6 +31,13 @@ python3 run.py Scenarios/Scenario1
 
 This command automatically triggers `make` to build the project and runs the compiled binary with the specified scenario path.
 
+
+Run the tests using the Python script:
+
+```bash
+python3 simple_integration_tests.py
+```
+
 ## Output
 
 Simulation results and dispatch plans are exported directly to the `Documentation/` directory:
