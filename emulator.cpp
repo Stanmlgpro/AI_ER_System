@@ -41,7 +41,6 @@ void Emulator::run_tick(int current_time) {
     // 4. Process unresolved incidents
     for (auto it = unresolved_incidents.begin(); it != unresolved_incidents.end();) {
         if (current_time > it->deadline) {
-            std::cout << "Warning: Incident " << it->incident_id << " has missed its deadline at time " << current_time << ".\n";
             it = unresolved_incidents.erase(it); // Remove from unresolved since it's too late
             continue;
         }

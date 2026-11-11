@@ -33,8 +33,6 @@ int main(int argc, char* argv[]) {
         int current_time = t; // Simulated time step
 
         if(emulator.check_end_conditions()){
-            std::cout << "All incidents have been resolved or no responders are available. Ending simulation." << std::endl;
-            std::cout << "Total simulation time: " << current_time << " ticks." << std::endl;
             break;
         }
         // Update static road states using weather & reports CSVs
