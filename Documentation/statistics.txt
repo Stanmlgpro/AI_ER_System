@@ -1,3 +1,6 @@
---- Simulation Statistics ---
-Status: Completed
-Total Dispatches: 1
+System statistics:
+
+* 15 incidents handled
+* 7 responders used
+* Average response time: 517.67s
+* Deadlines met: 75%

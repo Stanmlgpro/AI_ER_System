@@ -43,7 +43,7 @@ CityGraph load_city_graph(const std::string& filepath) {
         road.distance = j_road["distance"].get<double>();
         road.road_type = j_road["road_type"].get<std::string>();
         road.speed = j_road["speed"].get<double>();
-        road.base_travel_time = (road.speed > 0) ? (road.distance / road.speed) : road.distance;
+        road.base_travel_time = (road.speed > 0) ? (road.distance / (road.speed)) : road.distance;
         road.state = RoadState::OPEN; // Default state
 
         graph.adj_list[from].push_back(road);
@@ -54,10 +54,10 @@ CityGraph load_city_graph(const std::string& filepath) {
 
 double Road::get_travel_time() const {
     double travel_time = base_travel_time;
-    if (traffic_volume == "high") {
-        travel_time *= 1.5;
+    if (traffic_volume == "low") {
+        travel_time /= 2.0;
     } else if (traffic_volume == "medium") {
-        travel_time *= 1.2;
+        travel_time /= 1.5;
     }
     
 
@@ -65,6 +65,12 @@ double Road::get_travel_time() const {
         travel_time *= 1.5;
     } else if (state == RoadState::BLOCKED) {
         travel_time = std::numeric_limits<double>::infinity();
+    }
+
+    if (road_type == "main") {
+        travel_time *= 0.7; // 10% faster on main roads
+    } else if (road_type == "secondary") {
+        travel_time *= 1.2; // 10% slower on secondary roads
     }
     return travel_time;
 }

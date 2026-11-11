@@ -130,7 +130,7 @@ RoadState RoadEvaluator::evaluate_bayesian_status(
     std::string weather_key = weather_to_string(weather);
 
     // Prior P(Status | Weather)[cite: 2]
-    for (const auto& state : states) {
+    for (const auto& state : states) {  
         posteriors[state] = road_prob_config_["road_status_given_weather"][weather_key][state].get<double>();
     }
 
