@@ -29,14 +29,14 @@ int main(int argc, char* argv[]) {
 
 
     int t = 0;
+    // Update static road states using weather & reports CSVs
+    evaluator.update_city_road_states(city);
     while (true) {
         int current_time = t; // Simulated time step
 
         if(emulator.check_end_conditions()){
             break;
         }
-        // Update static road states using weather & reports CSVs
-        evaluator.update_city_road_states(city);
         // Update dynamic traffic states using the observations CSV and current timestamp
         evaluator.update_city_traffic_states(city, current_time);
 

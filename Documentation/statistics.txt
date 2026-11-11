@@ -1,6 +1,6 @@
 System statistics:
 
-* 4 incidents handled
-* 3 responders used
-* Average response time: 45.01s
-* Deadlines met: 57%
+* 5 incidents handled
+* 4 responders used
+* Average response time: 58.3413s
+* Deadlines met: 71%

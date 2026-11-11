@@ -7,18 +7,38 @@
 Emulator::Emulator(Documentor& documentor, CityGraph* city_, const std::vector<Incident>& incidents_, const std::vector<Responder>& responders_)
     : documentor(documentor), city(city_), incidents(incidents_), responders(responders_) {}
 
+int get_priority_weight(IncidentPriorityLevel priority) {
+    switch (priority) {
+        case IncidentPriorityLevel::CRITICAL: return 0; // Highest priority
+        case IncidentPriorityLevel::HIGH:     return 1;
+        case IncidentPriorityLevel::MEDIUM:   return 2;
+        case IncidentPriorityLevel::LOW:      return 3; // Lowest priority
+        default:                              return 4;
+    }
+}
+
 void Emulator::run_tick(int current_time) {
     // 1. Move incidents whose timestamp has arrived into unresolved_incidents ONCE
     for (auto it = incidents.begin(); it != incidents.end(); ) {
-        if (it->timestamp <= current_time) { // Use <= just in case, or == for exact ticks
+        if (it->timestamp <= current_time) {
             unresolved_incidents.push_back(*it);
-            it = incidents.erase(it); // Erase from the waiting list so it's only moved once!
+            it = incidents.erase(it);
         } else {
             ++it;
         }
     }
 
-    // 2. Decrement busy responders
+    // 2. Sort unresolved incidents by Priority (highest first) and Deadline (earliest first)
+    std::sort(unresolved_incidents.begin(), unresolved_incidents.end(), [](const Incident& a, const Incident& b) {
+    if (a.deadline != b.deadline) {
+        return a.deadline < b.deadline; // Primary: Earlier deadline goes first
+    }
+    int weight_a = get_priority_weight(a.priority);
+    int weight_b = get_priority_weight(b.priority);
+    return weight_a < weight_b; // Tie-breaker: Higher priority (lower weight) goes first
+    });
+
+    // 3. Decrement busy responders
     for (auto& responder : responders) {
         if (responder.availability == AvailabilityStatus::BUSY) {
             if (responder.time_until_available > 0) {
@@ -30,7 +50,7 @@ void Emulator::run_tick(int current_time) {
         }
     }
 
-    // 3. Build available_now list for this tick
+    // 4. Build available_now list for this tick
     std::vector<Responder> available_now;
     for (auto& responder : responders) {
         if (responder.availability == AvailabilityStatus::AVAILABLE) {
@@ -38,7 +58,7 @@ void Emulator::run_tick(int current_time) {
         }
     }
 
-    // 4. Process unresolved incidents
+    // 5. Process unresolved incidents
     for (auto it = unresolved_incidents.begin(); it != unresolved_incidents.end();) {
         if (current_time > it->deadline) {
             it = unresolved_incidents.erase(it); // Remove from unresolved since it's too late

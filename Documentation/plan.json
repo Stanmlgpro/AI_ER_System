@@ -1,9 +1,9 @@
 [
     {
-        "incident_id": "I1",
+        "incident_id": "I4",
         "path": [
             "H1",
-            "N4"
+            "N2"
         ],
         "responder_id": "R2",
         "time": 0
@@ -20,6 +20,15 @@
         "time": 0
     },
     {
+        "incident_id": "I1",
+        "path": [
+            "N3",
+            "N4"
+        ],
+        "responder_id": "R4",
+        "time": 9
+    },
+    {
         "incident_id": "I5",
         "path": [
             "N1"
@@ -34,7 +43,7 @@
             "H1",
             "N1"
         ],
-        "responder_id": "R2",
-        "time": 50
+        "responder_id": "R4",
+        "time": 80
     }
 ]
