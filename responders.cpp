@@ -65,7 +65,7 @@ std::vector<Responder> load_responders(const std::string& filepath) {
             if (std::getline(ss, avail_str, ',') &&
                 std::getline(ss, segment, ',')) {
                 resp.availability = parse_availability(avail_str);
-                resp.time_until_available = std::stod(segment);
+                resp.time_until_available = std::stod(segment) + 1; // Adjust for tick-zero decrement
                 responders.push_back(resp);
             }
         }

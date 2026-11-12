@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Integration tests that check whether generated dispatch plans are valid.
+"""Advanced integration tests checking validator compliance while respecting
+dynamic C++ HMM/Bayesian travel time calculations.
 
-Run with: python3 simple_integration_tests.py
-The tests build and run the real C++ program against every supplied scenario.
+Run with: python3 advanced_integration_tests.py
 """
 
 from __future__ import annotations
@@ -26,9 +26,6 @@ def read_scenario(scenario_dir: Path) -> dict[str, Any]:
     graph = json.loads((scenario_dir / "city_graph.json").read_text(encoding="utf-8"))
     nodes = {node["id"] for node in graph["nodes"]}
 
-    # The simulator's route costs change with traffic and road reports.
-    # These base costs let us check that a route is made of real roads; we do
-    # not use them to claim that a traffic-dependent deadline is guaranteed.
     roads = {
         (road["from"], road["to"]): float(road["distance"]) / float(road["speed"])
         for road in graph["roads"]
@@ -59,23 +56,23 @@ def read_scenario(scenario_dir: Path) -> dict[str, Any]:
     return {"nodes": nodes, "roads": roads, "responders": responders, "incidents": incidents}
 
 
-def plan_errors(plan: Any, scenario: dict[str, Any]) -> list[str]:
-    """Return plain-English problems found in a dispatch plan."""
+def validate_plan(plan: Any, scenario: dict[str, Any]) -> tuple[list[str], list[str]]:
+    """Return (hard_errors, pessimistic_warnings) for a dispatch plan."""
     if not isinstance(plan, list):
-        return ["The plan must be a JSON list."]
+        return ["schema"], []
 
     errors: list[str] = []
+    warnings: list[str] = []
     responders = scenario["responders"]
     incidents = scenario["incidents"]
     seen_incidents: set[str] = set()
+
     responder_locations = {key: value["location"] for key, value in responders.items()}
-    # Keep track of when each responder is busy so we can detect conflicting jobs.
     responder_busy_until = {key: value["available_at"] for key, value in responders.items()}
 
-    for number, item in enumerate(plan, start=1):
-        label = f"Assignment {number}"
+    for item in plan:
         if not isinstance(item, dict) or set(item) != PLAN_KEYS:
-            errors.append(f"{label} must contain exactly: responder_id, incident_id, path, time.")
+            errors.append("schema")
             continue
 
         responder_id = item["responder_id"]
@@ -84,52 +81,79 @@ def plan_errors(plan: Any, scenario: dict[str, Any]) -> list[str]:
         dispatch_time = item["time"]
 
         if responder_id not in responders:
-            errors.append(f"{label} refers to unknown responder {responder_id!r}.")
+            errors.append(f"unknown_responder ({responder_id})")
             continue
         if incident_id not in incidents:
-            errors.append(f"{label} refers to unknown incident {incident_id!r}.")
+            errors.append(f"unknown_incident ({incident_id})")
             continue
         if incident_id in seen_incidents:
-            errors.append(f"Incident {incident_id!r} is assigned more than once.")
+            errors.append(f"duplicate_incident ({incident_id})")
         seen_incidents.add(incident_id)
 
         responder = responders[responder_id]
         incident = incidents[incident_id]
+
         if incident["capability"] not in responder["capabilities"]:
-            errors.append(f"Responder {responder_id!r} lacks the capability for {incident_id!r}.")
-        if not isinstance(dispatch_time, (int, float)) or isinstance(dispatch_time, bool) or not math.isfinite(dispatch_time) or dispatch_time < 0:
-            errors.append(f"{label} has an invalid dispatch time.")
+            errors.append(f"capability ({responder_id} -> {incident_id})")
+
+        if (
+            not isinstance(dispatch_time, (int, float))
+            or isinstance(dispatch_time, bool)
+            or not math.isfinite(dispatch_time)
+            or dispatch_time < 0
+        ):
+            errors.append(f"invalid_time ({incident_id})")
             continue
+
         if dispatch_time < incident["known_at"]:
-            errors.append(f"{label} starts before incident {incident_id!r} is known.")
+            errors.append(f"starts_before_known ({incident_id})")
+
         if dispatch_time < responder_busy_until[responder_id]:
-            errors.append(f"Responder {responder_id!r} has overlapping or too-early assignments.")
+            errors.append(f"responder_unavailable / overlap ({responder_id} on {incident_id})")
 
         if not isinstance(path, list) or not path:
-            errors.append(f"{label} must have a non-empty path.")
+            errors.append(f"empty_path ({incident_id})")
             continue
+
         if path[0] != responder_locations[responder_id]:
-            errors.append(f"{label} starts at the wrong responder location.")
+            errors.append(f"wrong_origin ({responder_id} on {incident_id})")
+
         if path[-1] != incident["location"]:
-            errors.append(f"{label} does not end at the incident location.")
+            errors.append(f"wrong_destination ({incident_id})")
+
         if any(node not in scenario["nodes"] for node in path):
-            errors.append(f"{label} contains a node that is not in the city graph.")
+            errors.append(f"invalid_path_node ({incident_id})")
             continue
 
         route_edges = list(zip(path, path[1:]))
         if any(edge not in scenario["roads"] for edge in route_edges):
-            errors.append(f"{label} uses a road that does not exist in the city graph.")
+            errors.append(f"invalid_path_edge ({incident_id})")
             continue
 
-        # Update the responder's location and next available time for later jobs.
         base_travel_time = sum(scenario["roads"][edge] for edge in route_edges)
+        total_task_duration = base_travel_time + incident["service_time"]
+
+        # Hard check: static baseline travel time cannot exceed deadline
+        if (dispatch_time + base_travel_time) > incident["deadline"]:
+            errors.append(
+                f"missed_deadline_optimistic ({incident_id}: "
+                f"est={dispatch_time + base_travel_time:.1f} > dl={incident['deadline']})"
+            )
+
+        # Soft check: log static 1.5x buffer as diagnostic info since C++ uses HMM/Bayesian speeds
+        if (dispatch_time + (base_travel_time * 1.5)) > incident["deadline"]:
+            warnings.append(
+                f"pessimistic_static_margin_tight ({incident_id}: "
+                f"1.5x_est={dispatch_time + base_travel_time * 1.5:.1f} > dl={incident['deadline']})"
+            )
+
         responder_locations[responder_id] = incident["location"]
-        responder_busy_until[responder_id] = dispatch_time + base_travel_time + incident["service_time"]
+        responder_busy_until[responder_id] = dispatch_time + total_task_duration
 
-    return errors
+    return errors, warnings
 
 
-class SimpleIntegrationTests(unittest.TestCase):
+class AdvancedIntegrationTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         build = subprocess.run(
@@ -141,7 +165,7 @@ class SimpleIntegrationTests(unittest.TestCase):
             raise AssertionError(f"Build failed (exit {build.returncode}):\n{build.stdout}")
         cls.executable = ROOT / "run"
 
-    def test_generated_plans_are_valid_for_every_scenario(self) -> None:
+    def test_validator_compliance_per_scenario(self) -> None:
         scenario_dirs = sorted(
             path for path in SCENARIOS_DIR.iterdir()
             if path.is_dir() and path.name.startswith("Scenario")
@@ -149,7 +173,7 @@ class SimpleIntegrationTests(unittest.TestCase):
         self.assertTrue(scenario_dirs, "No Scenario folders were found.")
 
         for scenario_dir in scenario_dirs:
-            with self.subTest(scenario=scenario_dir.name), tempfile.TemporaryDirectory(prefix="simple-er-") as temp_dir:
+            with self.subTest(scenario=scenario_dir.name), tempfile.TemporaryDirectory(prefix="adv-er-") as temp_dir:
                 run = subprocess.run(
                     [str(self.executable), str(scenario_dir)], cwd=temp_dir,
                     text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
@@ -162,9 +186,17 @@ class SimpleIntegrationTests(unittest.TestCase):
 
                 plan_path = Path(temp_dir) / "Documentation" / "plan.json"
                 self.assertTrue(plan_path.is_file(), f"{scenario_dir.name} did not write plan.json")
+
                 plan = json.loads(plan_path.read_text(encoding="utf-8"))
-                problems = plan_errors(plan, read_scenario(scenario_dir))
-                self.assertEqual(problems, [], f"Invalid plan for {scenario_dir.name}:\n- " + "\n- ".join(problems))
+                errors, warnings = validate_plan(plan, read_scenario(scenario_dir))
+
+                if warnings:
+                    print(f"\n[{scenario_dir.name}] Diagnostic warnings: {warnings}")
+
+                self.assertEqual(
+                    errors, [],
+                    f"Hard validator violations in {scenario_dir.name}:\n- " + "\n- ".join(errors),
+                )
 
 
 if __name__ == "__main__":

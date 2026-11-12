@@ -35,7 +35,7 @@ This command automatically triggers `make` to build the project and runs the com
 Run the tests using the Python script:
 
 ```bash
-python3 simple_integration_tests.py
+python3 tests.py
 ```
 
 ## Output

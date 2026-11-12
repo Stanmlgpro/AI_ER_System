@@ -37,7 +37,7 @@ void Documentor::generate_documentation() {
 
     std::ofstream json_file("Documentation/plan.json");
     if (json_file.is_open()) {
-        json_file << j_array.dump(4);
+        json_file << j_array.dump(2);
     }
 
     // 2. Write the companion statistics file
@@ -47,7 +47,10 @@ void Documentor::generate_documentation() {
         txt_file << "System statistics:\n\n";
         txt_file << "* " << total_dispatches_ << " incidents handled\n";
         txt_file << "* " << responder_ids.size() << " responders used\n";
-        txt_file << "* Average response time: " << (all_assignments_.empty() ? 0.0 : total_response_time_ / all_assignments_.size()) << "s\n";
-        txt_file << "* Deadlines met: " << (total_num_incidents_ > 0 ? std::to_string(total_dispatches_ * 100 / total_num_incidents_) : "0") << "%\n";
+        txt_file << "* Average response time: " 
+         << (all_assignments_.empty() ? 0.0 : total_response_time_ / all_assignments_.size()) << "s\n";
+        txt_file << "* Deadlines met: " 
+         << (total_num_incidents_ > 0 ? (static_cast<double>(total_dispatches_) * 100.0 / total_num_incidents_) : 0.0) 
+         << "%\n";
     }
 }
