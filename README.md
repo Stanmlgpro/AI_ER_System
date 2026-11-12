@@ -20,6 +20,7 @@ A modular, time-stepped C++ simulation system designed to handle emergency respo
 * `Scenarios/` - Scenario-specific configuration files (`city_graph.json`, `incidents.csv`, `responders.csv`, probability JSONs, and traffic observations)
 * `Documentation/` - Generated simulation logs (`plan.json` and `statistics.txt`)
 * `run.py` - Python automation script
+* `test.py` - Python test script
 
 ## Usage
 
